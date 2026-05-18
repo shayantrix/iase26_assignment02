@@ -46,12 +46,10 @@ data class BettingResult(
 object BettingService {
 
     private val bets = mutableMapOf<Int, Bet>()
-    private var cachedResult: BettingResult? = null
 
     /** Store a new bet, replacing any existing bet for the same match. */
     fun placeBet(bet: Bet) {
         bets[bet.matchId] = bet
-        cachedResult = null
     }
 
     /**
@@ -59,7 +57,6 @@ object BettingService {
      * as "evaluated" when both a prediction and a final score are available.
      */
     fun evaluate(matches: List<Match>): BettingResult {
-        cachedResult?.let { return it }
         var correct = 0
         var evaluated = 0
         for (match in matches) {
@@ -69,7 +66,7 @@ object BettingService {
             evaluated++
             if (bet.prediction == Prediction.outcomeOf(home, away)) correct++
         }
-        return BettingResult(correct, evaluated).also { cachedResult = it }
+        return BettingResult(correct, evaluated)
     }
 
     /**
@@ -80,14 +77,25 @@ object BettingService {
      *   - 0 points if the predicted outcome is wrong or the match has not been played.
      */
     fun evaluateBonus(matches: List<Match>): Int {
-        TODO("Implement bonus point evaluation")
+        var points = 0
+        for (match in matches) {
+            val home = match.homeScore ?: continue
+            val away = match.awayScore ?: continue
+            val bet = bets[match.matchId] ?: continue
+            points += when {
+                bet.predictedHomeScore == home && bet.predictedAwayScore == away -> 3
+                bet.prediction == Prediction.outcomeOf(home, away) -> 1
+                else -> 0
+            }
+        }
+        return points
     }
 
     /**
      * Remove the bet for [matchId]. Does nothing if no bet exists for that match.
      */
     fun removeBet(matchId: Int) {
-        TODO("Implement removing a single bet by matchId")
+        bets.remove(matchId)
     }
 
     /**
@@ -95,7 +103,8 @@ object BettingService {
      * exists; throws [IllegalArgumentException] if no bet is found for that match.
      */
     fun changeBet(bet: Bet) {
-        TODO("Implement changing an existing bet")
+        require(bets.containsKey(bet.matchId)) { "No bet exists for matchId ${bet.matchId}" }
+        bets[bet.matchId] = bet
     }
 
     /** Drop all stored bets. */
