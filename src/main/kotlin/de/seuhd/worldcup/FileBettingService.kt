@@ -9,12 +9,14 @@ import java.io.File
  */
 class FileBettingService(private val file: File) {
 
+    @Synchronized
     fun placeBet(bet: Bet) {
         val bets = readBets()
         bets[bet.matchId] = bet
         writeBets(bets.values)
     }
 
+    @Synchronized
     fun getBets(): List<Bet> = readBets().values.toList()
 
     private fun readBets(): MutableMap<Int, Bet> {
